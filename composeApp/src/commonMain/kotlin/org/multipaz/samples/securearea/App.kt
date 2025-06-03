@@ -202,6 +202,7 @@ private suspend fun documentStoreInit() {
 }
 
 private fun showToast(message: String) {
+    println("vishnu: $message")
     CoroutineScope(Dispatchers.Main).launch {
         when (snackbarHostState.showSnackbar(
             message = message,
@@ -230,6 +231,55 @@ fun App(promptModel: PromptModel) {
 
             val coroutineScope = rememberCoroutineScope { promptModel }
 
+            coroutineScope.launch(Dispatchers.Main) {
+                try {
+                    documentStoreInit()
+                    showToast("Document store created")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    showToast("Document store creation failed")
+                }
+
+                try {
+                    keyStorageInit()
+                    showToast("keyStorageInit done")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    showToast("keyStorageInit() failed")
+                }
+
+                try {
+                    val (dsKey, dsCert) = generateDsKeyAndCert(
+                        Algorithm.ESP256, // hardcoded
+                        iacaKey, iacaCert
+                    )
+                    provisionTestDocuments(
+                        documentStore = documentStore,
+                        secureArea = getPlatformSecureArea(),
+                        secureAreaCreateKeySettingsFunc = { challenge, algorithm, userAuthenticationRequired, validFrom, validUntil ->
+                            CloudCreateKeySettings.Builder(challenge)
+                                .setAlgorithm(algorithm).setPassphraseRequired(true)
+                                .setUserAuthenticationRequired(
+                                    userAuthenticationRequired, setOf(
+                                        CloudUserAuthType.PASSCODE,
+                                        CloudUserAuthType.BIOMETRIC
+                                    )
+                                ).setValidityPeriod(validFrom, validUntil).build()
+                        },
+                        dsKey = dsKey,
+                        dsCert = dsCert,
+                        showToast = { message: String -> showToast(message) },
+                        deviceKeyAlgorithm = Algorithm.ESP256, // hardcoded
+                        deviceKeyMacAlgorithm = Algorithm.ESP256, // hardcoded
+                        numCredentialsPerDomain = 2, // hardcoded
+                    )
+                    showToast("Provision test documents successful")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    showToast("Provision test documents creation failed")
+                }
+            }
+
             Column(
                 modifier = Modifier.fillMaxWidth().padding(50.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -237,17 +287,13 @@ fun App(promptModel: PromptModel) {
 
                 Button(onClick = {
                     coroutineScope.launch {
-
                         try {
-
                             documentStoreInit()
-
                             showToast("Document store created")
                         } catch (e: Exception) {
                             e.printStackTrace()
                             showToast("Document store creation failed")
                         }
-
                     }
                 }) {
                     Text("Create DocumentStore")
@@ -255,10 +301,8 @@ fun App(promptModel: PromptModel) {
 
                 Button(onClick = {
                     coroutineScope.launch {
-
                         try {
                             keyStorageInit()
-
                             showToast("keyStorageInit done")
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -272,13 +316,11 @@ fun App(promptModel: PromptModel) {
 
                 Button(onClick = {
                     coroutineScope.launch {
-
                         try {
                             val (dsKey, dsCert) = generateDsKeyAndCert(
                                 Algorithm.ESP256, // hardcoded
                                 iacaKey, iacaCert
                             )
-
                             provisionTestDocuments(
                                 documentStore = documentStore,
                                 secureArea = getPlatformSecureArea(),
@@ -299,13 +341,11 @@ fun App(promptModel: PromptModel) {
                                 deviceKeyMacAlgorithm = Algorithm.ESP256, // hardcoded
                                 numCredentialsPerDomain = 2, // hardcoded
                             )
-
                             showToast("Provision test documents successful")
                         } catch (e: Exception) {
                             e.printStackTrace()
                             showToast("Provision test documents creation failed")
                         }
-
                     }
                 }) {
                     Text("Provision test documents")
