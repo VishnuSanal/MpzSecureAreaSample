@@ -40,73 +40,9 @@ actual suspend fun getPlatformSecureArea(): SecureArea {
     )
 }
 
-actual fun getPlatformCreateKeySettings(
-    challenge: ByteString,
-    algorithm: Algorithm,
-    userAuthenticationRequired: Boolean,
-    validFrom: Instant,
-    validUntil: Instant
-): CreateKeySettings {
-    check(algorithm.fullySpecified)
-    var timeoutMillis = 0L
-    // Work around Android bug where ECDH keys don't work with timeout 0, see
-    // AndroidKeystoreUnlockData.cryptoObjectForKeyAgreement for details.
-    if (algorithm.isKeyAgreement) {
-        timeoutMillis = 1000L
-    }
-    return AndroidKeystoreCreateKeySettings.Builder(challenge)
-        .setAlgorithm(algorithm)
-        .setUserAuthenticationRequired(
-            required = userAuthenticationRequired,
-            timeoutMillis = timeoutMillis,
-            userAuthenticationTypes = setOf(
-                UserAuthenticationType.LSKF,
-                UserAuthenticationType.BIOMETRIC
-            )
-        )
-        .setValidityPeriod(validFrom, validUntil)
-        .build()
-}
-
-private var platformInitialized = false
-private val platformInitLock = Mutex()
-
-actual suspend fun platformInit() {
-    platformInitLock.withLock {
-        if (platformInitialized) {
-            return
-        }
-        // This is needed to prefer BouncyCastle bundled with the app instead of the Conscrypt
-        // based implementation included in the OS itself.
-        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-        Security.addProvider(BouncyCastleProvider())
-        platformInitialized = true
-    }
-//    NotificationManagerAndroid.setSmallIcon(R.drawable.ic_stat_name)
-//    NotificationManagerAndroid.setChannelTitle(
-//        applicationContext.getString(R.string.notification_channel_title)
-//    )
-}
-
-actual fun getLocalIpAddress(): String {
-    for (iface in NetworkInterface.getNetworkInterfaces()) {
-        for (inetAddress in iface.inetAddresses) {
-            if (!inetAddress.isLoopbackAddress) {
-                val address = inetAddress.hostAddress
-                if (address != null && address.indexOf(':') < 0) {
-                    return address
-                }
-            }
-        }
-    }
-    throw IllegalStateException("Unable to determine address")
-}
-
 actual fun platformStorage(): Storage {
     return androidStorage
 }
-
-actual fun platformHttpClientEngineFactory(): HttpClientEngineFactory<*> = Android
 
 private val androidKeystoreSecureAreaProvider = SecureAreaProvider {
     AndroidKeystoreSecureArea.create(androidStorage)
@@ -114,38 +50,6 @@ private val androidKeystoreSecureAreaProvider = SecureAreaProvider {
 
 actual fun platformSecureAreaProvider(): SecureAreaProvider<SecureArea> {
     return androidKeystoreSecureAreaProvider
-}
-
-actual val platformSecureAreaHasKeyAgreement by lazy {
-    AndroidKeystoreSecureArea.Capabilities().keyAgreementSupported
-}
-
-actual fun platformCreateKeySettings(
-    challenge: ByteString,
-    algorithm: Algorithm,
-    userAuthenticationRequired: Boolean,
-    validFrom: Instant,
-    validUntil: Instant
-): CreateKeySettings {
-    check(algorithm.fullySpecified)
-    var timeoutMillis = 0L
-    // Work around Android bug where ECDH keys don't work with timeout 0, see
-    // AndroidKeystoreUnlockData.cryptoObjectForKeyAgreement for details.
-    if (algorithm.isKeyAgreement) {
-        timeoutMillis = 1000L
-    }
-    return AndroidKeystoreCreateKeySettings.Builder(challenge)
-        .setAlgorithm(algorithm)
-        .setUserAuthenticationRequired(
-            required = userAuthenticationRequired,
-            timeoutMillis = timeoutMillis,
-            userAuthenticationTypes = setOf(
-                UserAuthenticationType.LSKF,
-                UserAuthenticationType.BIOMETRIC
-            )
-        )
-        .setValidityPeriod(validFrom, validUntil)
-        .build()
 }
 
 // https://stackoverflow.com/a/21505193/878126
