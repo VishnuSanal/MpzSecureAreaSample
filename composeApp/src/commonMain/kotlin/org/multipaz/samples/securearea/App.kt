@@ -1,7 +1,5 @@
 package org.multipaz.samples.securearea
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,14 +19,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.io.bytestring.ByteString
-import mpzsecureareasample.composeapp.generated.resources.Res
-import mpzsecureareasample.composeapp.generated.resources.compose_multiplatform
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.multipaz.crypto.Algorithm
 import org.multipaz.prompt.PromptModel
 import org.multipaz.compose.prompt.PromptDialogs
+import org.multipaz.crypto.EcPrivateKey
+import org.multipaz.crypto.X509Cert
+import org.multipaz.document.DocumentStore
+import org.multipaz.securearea.CreateKeySettings
+import org.multipaz.securearea.SecureArea
 import kotlin.time.Duration.Companion.days
 
 private lateinit var snackbarHostState: SnackbarHostState
@@ -94,14 +95,60 @@ fun App(promptModel: PromptModel) {
                 }) {
                     Text("Click me!")
                 }
-                AnimatedVisibility(showContent) {
-                    val greeting = remember { Greeting().greet() }
-                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Image(painterResource(Res.drawable.compose_multiplatform), null)
-                        Text("Compose: $greeting")
-                    }
-                }
             }
         }
     }
+}
+
+private suspend fun provisionTestDocuments(
+    documentStore: DocumentStore,
+    secureArea: SecureArea,
+    secureAreaCreateKeySettingsFunc: (
+        challenge: ByteString,
+        algorithm: Algorithm,
+        userAuthenticationRequired: Boolean,
+        validFrom: Instant,
+        validUntil: Instant
+    ) -> CreateKeySettings,
+    dsKey: EcPrivateKey,
+    dsCert: X509Cert,
+    deviceKeyAlgorithm: Algorithm,
+    deviceKeyMacAlgorithm: Algorithm,
+    numCredentialsPerDomain: Int,
+    showToast: (message: String) -> Unit,
+    showDocumentCreationDialog: MutableState<Boolean>
+) {
+    // This can be slow... so we show a dialog to help convey this to the user.
+    showDocumentCreationDialog.value = true
+
+    if (documentStore.listDocuments().size >= 5) {
+        // TODO: we need a more granular check once we support provisioning other kinds of documents
+        showToast("Test Documents already provisioned. Delete all documents and try again")
+        return
+    }
+    if (secureArea.supportedAlgorithms.find { it == deviceKeyAlgorithm } == null) {
+        showToast("Secure Area doesn't support algorithm $deviceKeyAlgorithm for DeviceKey")
+        return
+    }
+    if (deviceKeyMacAlgorithm != Algorithm.UNSET &&
+        secureArea.supportedAlgorithms.find { it == deviceKeyMacAlgorithm } == null) {
+        showToast("Secure Area doesn't support algorithm $deviceKeyMacAlgorithm for DeviceKey for MAC")
+        return
+    }
+    try {
+        MultipazUtils.provisionTestDocuments(
+            documentStore,
+            secureArea,
+            secureAreaCreateKeySettingsFunc,
+            dsKey,
+            dsCert,
+            deviceKeyAlgorithm,
+            deviceKeyMacAlgorithm,
+            numCredentialsPerDomain
+        )
+    } catch (e: Throwable) {
+        e.printStackTrace()
+        showToast("Error provisioning documents: $e")
+    }
+    showDocumentCreationDialog.value = false
 }
