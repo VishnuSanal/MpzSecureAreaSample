@@ -275,7 +275,7 @@ fun App(promptModel: PromptModel) {
 
                         try {
                             val (dsKey, dsCert) = generateDsKeyAndCert(
-                                Algorithm.UNSET, // hardcoded
+                                Algorithm.ESP256, // hardcoded
                                 iacaKey, iacaCert
                             )
 
@@ -295,8 +295,8 @@ fun App(promptModel: PromptModel) {
                                 dsKey = dsKey,
                                 dsCert = dsCert,
                                 showToast = { message: String -> showToast(message) },
-                                deviceKeyAlgorithm = Algorithm.UNSET, // hardcoded
-                                deviceKeyMacAlgorithm = Algorithm.UNSET, // hardcoded
+                                deviceKeyAlgorithm = Algorithm.ESP256, // hardcoded
+                                deviceKeyMacAlgorithm = Algorithm.ESP256, // hardcoded
                                 numCredentialsPerDomain = 2, // hardcoded
                             )
 

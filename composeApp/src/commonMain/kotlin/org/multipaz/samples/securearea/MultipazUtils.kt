@@ -83,7 +83,7 @@ object MultipazUtils {
         numCredentialsPerDomain: Int,
     ) {
         require(deviceKeyAlgorithm.isSigning)
-        require(deviceKeyMacAlgorithm == Algorithm.UNSET || deviceKeyMacAlgorithm.isKeyAgreement)
+//        require(deviceKeyMacAlgorithm == Algorithm.UNSET || deviceKeyMacAlgorithm.isKeyAgreement)
         provisionDocument(
             documentStore,
             secureArea,
