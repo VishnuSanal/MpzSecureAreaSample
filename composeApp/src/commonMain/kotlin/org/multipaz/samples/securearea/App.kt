@@ -17,7 +17,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.ktor.http.decodeURLPart
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -31,7 +30,6 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.multipaz.asn1.ASN1Integer
 import org.multipaz.cbor.Cbor
 import org.multipaz.compose.prompt.PromptDialogs
-import org.multipaz.credential.CredentialLoader
 import org.multipaz.crypto.Algorithm
 import org.multipaz.crypto.Crypto
 import org.multipaz.crypto.EcCurve
@@ -41,28 +39,22 @@ import org.multipaz.crypto.X500Name
 import org.multipaz.crypto.X509Cert
 import org.multipaz.document.DocumentStore
 import org.multipaz.documenttype.DocumentTypeRepository
-import org.multipaz.mdoc.credential.MdocCredential
 import org.multipaz.mdoc.util.MdocUtil
 import org.multipaz.prompt.PromptModel
-import org.multipaz.sdjwt.credential.KeyBoundSdJwtVcCredential
-import org.multipaz.sdjwt.credential.KeylessSdJwtVcCredential
+import org.multipaz.samples.securearea.MultipazWrapper.getDocumentStore
 import org.multipaz.securearea.CreateKeySettings
 import org.multipaz.securearea.SecureArea
 import org.multipaz.securearea.SecureAreaRepository
 import org.multipaz.securearea.cloud.CloudCreateKeySettings
-import org.multipaz.securearea.cloud.CloudSecureArea
 import org.multipaz.securearea.cloud.CloudUserAuthType
 import org.multipaz.securearea.software.SoftwareSecureArea
 import org.multipaz.storage.StorageTable
 import org.multipaz.storage.StorageTableSpec
 import org.multipaz.storage.base.BaseStorageTable
-import org.multipaz.testapp.TestAppDocumentMetadata
 import org.multipaz.trustmanagement.TrustManager
-import org.multipaz.util.Logger
 import kotlin.time.Duration.Companion.days
 
 private lateinit var snackbarHostState: SnackbarHostState
-
 
 lateinit var documentTypeRepository: DocumentTypeRepository
 
@@ -159,47 +151,6 @@ private suspend fun keyStorageInit() {
             }
 }
 
-private suspend fun documentStoreInit() {
-    softwareSecureArea = SoftwareSecureArea.create(platformStorage())
-    secureAreaRepository = SecureAreaRepository.build {
-        add(softwareSecureArea)
-        add(platformSecureAreaProvider().get())
-        addFactory(CloudSecureArea.IDENTIFIER_PREFIX) { identifier ->
-            val queryString = identifier.substring(CloudSecureArea.IDENTIFIER_PREFIX.length + 1)
-            val params = queryString.split("&").map {
-                val parts = it.split("=", ignoreCase = false, limit = 2)
-                parts[0] to parts[1].decodeURLPart()
-            }.toMap()
-            val cloudSecureAreaUrl = params["url"]!!
-            Logger.i("vishnu", "Creating CSA with url $cloudSecureAreaUrl for $identifier")
-            CloudSecureArea.create(
-                platformStorage(),
-                identifier,
-                cloudSecureAreaUrl,
-                platformHttpClientEngineFactory()
-            )
-        }
-    }
-
-    // CREDENTIAL_TYPE const introduced after v0.91.0 release -- hence not accessible here
-    val credentialLoader: CredentialLoader = CredentialLoader()
-    credentialLoader.addCredentialImplementation(MdocCredential::class) { document ->
-        MdocCredential(document)
-    }
-    credentialLoader.addCredentialImplementation(KeyBoundSdJwtVcCredential::class) { document ->
-        KeyBoundSdJwtVcCredential(document)
-    }
-    credentialLoader.addCredentialImplementation(KeylessSdJwtVcCredential::class) { document ->
-        KeylessSdJwtVcCredential(document)
-    }
-    documentStore = DocumentStore(
-        storage = platformStorage(),
-        secureAreaRepository = secureAreaRepository,
-        credentialLoader = credentialLoader,
-        documentMetadataFactory = TestAppDocumentMetadata::create,
-        documentTableSpec = testDocumentTableSpec
-    )
-}
 
 private fun showToast(message: String) {
     println("vishnu: $message")
@@ -233,7 +184,7 @@ fun App(promptModel: PromptModel) {
 
             coroutineScope.launch(Dispatchers.Main) {
                 try {
-                    documentStoreInit()
+                    documentStore = getDocumentStore()
                     showToast("Document store created")
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -242,6 +193,7 @@ fun App(promptModel: PromptModel) {
 
                 try {
                     keyStorageInit()
+
                     showToast("keyStorageInit done")
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -288,7 +240,7 @@ fun App(promptModel: PromptModel) {
                 Button(onClick = {
                     coroutineScope.launch {
                         try {
-                            documentStoreInit()
+                            documentStore = getDocumentStore()
                             showToast("Document store created")
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -368,11 +320,6 @@ private suspend fun provisionTestDocuments(
     numCredentialsPerDomain: Int,
     showToast: (message: String) -> Unit,
 ) {
-    if (documentStore.listDocuments().size >= 5) {
-        // TODO: we need a more granular check once we support provisioning other kinds of documents
-        showToast("Test Documents already provisioned. Delete all documents and try again")
-        return
-    }
     if (secureArea.supportedAlgorithms.find { it == deviceKeyAlgorithm } == null) {
         showToast("Secure Area doesn't support algorithm $deviceKeyAlgorithm for DeviceKey")
         return
