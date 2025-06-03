@@ -6,12 +6,11 @@ import kotlinx.io.bytestring.ByteString
 import kotlinx.io.bytestring.encodeToByteString
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import mpzsecureareasample.composeapp.generated.resources.Res
-import mpzsecureareasample.composeapp.generated.resources.driving_license_card_art
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.getDrawableResourceBytes
 import org.jetbrains.compose.resources.getSystemResourceEnvironment
+import org.multipaz.asn1.ASN1Integer
 import org.multipaz.cbor.Bstr
 import org.multipaz.cbor.Cbor
 import org.multipaz.cbor.DataItem
@@ -25,7 +24,9 @@ import org.multipaz.cose.CoseLabel
 import org.multipaz.cose.CoseNumberLabel
 import org.multipaz.credential.SecureAreaBoundCredential
 import org.multipaz.crypto.Algorithm
+import org.multipaz.crypto.Crypto
 import org.multipaz.crypto.EcPrivateKey
+import org.multipaz.crypto.X500Name
 import org.multipaz.crypto.X509Cert
 import org.multipaz.crypto.X509CertChain
 import org.multipaz.document.Document
@@ -34,7 +35,7 @@ import org.multipaz.documenttype.DocumentType
 import org.multipaz.mdoc.credential.MdocCredential
 import org.multipaz.mdoc.issuersigned.buildIssuerNamespaces
 import org.multipaz.mdoc.mso.MobileSecurityObjectGenerator
-import org.multipaz.samples.securearea.knowntypes.DrivingLicense
+import org.multipaz.mdoc.util.MdocUtil
 import org.multipaz.sdjwt.Issuer
 import org.multipaz.sdjwt.SdJwtVcGenerator
 import org.multipaz.sdjwt.credential.KeyBoundSdJwtVcCredential
@@ -70,38 +71,8 @@ object MultipazUtils {
     // This domain is for KeylessSdJwtVcCredential
     const val CREDENTIAL_DOMAIN_SDJWT_KEYLESS = "sdjwt_keyless"
 
-    suspend fun provisionTestDocuments(
-        documentStore: DocumentStore,
-        secureArea: SecureArea,
-        secureAreaCreateKeySettingsFunc: (
-            challenge: ByteString, algorithm: Algorithm, userAuthenticationRequired: Boolean, validFrom: Instant, validUntil: Instant
-        ) -> CreateKeySettings,
-        dsKey: EcPrivateKey,
-        dsCert: X509Cert,
-        deviceKeyAlgorithm: Algorithm,
-        deviceKeyMacAlgorithm: Algorithm,
-        numCredentialsPerDomain: Int,
-    ) {
-        require(deviceKeyAlgorithm.isSigning)
-//        require(deviceKeyMacAlgorithm == Algorithm.UNSET || deviceKeyMacAlgorithm.isKeyAgreement)
-        provisionDocument(
-            documentStore,
-            secureArea,
-            secureAreaCreateKeySettingsFunc,
-            dsKey,
-            dsCert,
-            deviceKeyAlgorithm,
-            deviceKeyMacAlgorithm,
-            numCredentialsPerDomain,
-            DrivingLicense.getDocumentType(),
-            "Erika",
-            "Erika's Driving License",
-            Res.drawable.driving_license_card_art
-        )
-    }
-
     @OptIn(ExperimentalResourceApi::class)
-    private suspend fun provisionDocument(
+    suspend fun provisionDocument(
         documentStore: DocumentStore,
         secureArea: SecureArea,
         secureAreaCreateKeySettingsFunc: (
@@ -121,6 +92,10 @@ object MultipazUtils {
         displayName: String,
         cardArtResource: DrawableResource,
     ) {
+        println(
+            "vishnu" +
+            "provisionDocument() called with: documentStore = $documentStore, secureArea = $secureArea, secureAreaCreateKeySettingsFunc = $secureAreaCreateKeySettingsFunc, dsKey = $dsKey, dsCert = $dsCert, deviceKeyAlgorithm = $deviceKeyAlgorithm, deviceKeyMacAlgorithm = $deviceKeyMacAlgorithm, numCredentialsPerDomain = $numCredentialsPerDomain, documentType = $documentType, givenNameOverride = $givenNameOverride, displayName = $displayName, cardArtResource = $cardArtResource"
+        )
         val cardArt = getDrawableResourceBytes(
             getSystemResourceEnvironment(),
             cardArtResource,
@@ -176,6 +151,28 @@ object MultipazUtils {
         }
     }
 
+    fun generateDsKeyAndCert(
+        algorithm: Algorithm,
+        iacaKey: EcPrivateKey,
+        iacaCert: X509Cert,
+    ): Pair<EcPrivateKey, X509Cert> {
+        // The DS cert must not be valid for more than 457 days.
+        // Reference: ISO/IEC 18013-5:2021 Annex B.1.4 Document signer certificate
+        val dsCertValidFrom = Clock.System.now() - 1.days
+        val dsCertsValidUntil = dsCertValidFrom + 455.days
+        val dsKey = Crypto.createEcPrivateKey(algorithm.curve!!)
+        val dsCert = MdocUtil.generateDsCertificate(
+            iacaCert = iacaCert,
+            iacaKey = iacaKey,
+            dsKey = dsKey.publicKey,
+            subject = X500Name.fromName("C=US,CN=OWF Multipaz TEST DS"),
+            serial = ASN1Integer.fromRandom(numBits = 128),
+            validFrom = dsCertValidFrom,
+            validUntil = dsCertsValidUntil,
+        )
+        return Pair(dsKey, dsCert)
+    }
+
     private suspend fun addMdocCredentials(
         document: Document,
         documentType: DocumentType,
@@ -197,6 +194,10 @@ object MultipazUtils {
         numCredentialsPerDomain: Int,
         givenNameOverride: String
     ) {
+        println(
+            "vishnu" +
+            "addMdocCredentials() called with: document = $document, documentType = $documentType, secureArea = $secureArea, secureAreaCreateKeySettingsFunc = $secureAreaCreateKeySettingsFunc, deviceKeyAlgorithm = $deviceKeyAlgorithm, deviceKeyMacAlgorithm = $deviceKeyMacAlgorithm, signedAt = $signedAt, validFrom = $validFrom, validUntil = $validUntil, dsKey = $dsKey, dsCert = $dsCert, numCredentialsPerDomain = $numCredentialsPerDomain, givenNameOverride = $givenNameOverride"
+        )
         val issuerNamespaces = buildIssuerNamespaces {
             for ((nsName, ns) in documentType.mdocDocumentType?.namespaces!!) {
                 addNamespace(nsName) {
@@ -232,7 +233,7 @@ object MultipazUtils {
                 CREDENTIAL_DOMAIN_MDOC_USER_AUTH -> deviceKeyAlgorithm
                 CREDENTIAL_DOMAIN_MDOC_NO_USER_AUTH -> deviceKeyAlgorithm
                 CREDENTIAL_DOMAIN_MDOC_MAC_USER_AUTH -> deviceKeyMacAlgorithm
-                CREDENTIAL_DOMAIN_MDOC_MAC_NO_USER_AUTH ->  deviceKeyMacAlgorithm
+                CREDENTIAL_DOMAIN_MDOC_MAC_NO_USER_AUTH -> deviceKeyMacAlgorithm
                 else -> throw IllegalStateException()
             }
             if (algorithm == Algorithm.UNSET) {
@@ -314,7 +315,6 @@ object MultipazUtils {
     // Technically - according to RFC 7800 at least - SD-JWT could do MACing too but it would
     // need to be specced out in e.g. SD-JWT VC profile where to get the public key from the
     // recipient. So for now, we only support signing.
-    //
     private suspend fun addSdJwtVcCredentials(
         document: Document,
         documentType: DocumentType,
@@ -335,6 +335,10 @@ object MultipazUtils {
         numCredentialsPerDomain: Int,
         givenNameOverride: String
     ) {
+        println(
+            "vishnu" +
+            "addSdJwtVcCredentials() called with: document = $document, documentType = $documentType, secureArea = $secureArea, secureAreaCreateKeySettingsFunc = $secureAreaCreateKeySettingsFunc, deviceKeyAlgorithm = $deviceKeyAlgorithm, signedAt = $signedAt, validFrom = $validFrom, validUntil = $validUntil, dsKey = $dsKey, dsCert = $dsCert, numCredentialsPerDomain = $numCredentialsPerDomain, givenNameOverride = $givenNameOverride"
+        )
         if (documentType.vcDocumentType == null) {
             return
         }
@@ -356,7 +360,10 @@ object MultipazUtils {
         }
 
         val (domains, numCredentialsPerDomainAdj) = if (documentType.vcDocumentType!!.keyBound) {
-            Pair(listOf(CREDENTIAL_DOMAIN_SDJWT_USER_AUTH, CREDENTIAL_DOMAIN_SDJWT_NO_USER_AUTH), numCredentialsPerDomain)
+            Pair(
+                listOf(CREDENTIAL_DOMAIN_SDJWT_USER_AUTH, CREDENTIAL_DOMAIN_SDJWT_NO_USER_AUTH),
+                numCredentialsPerDomain
+            )
         } else {
             // No point in having multiple credentials for keyless credentials..
             Pair(listOf(CREDENTIAL_DOMAIN_SDJWT_KEYLESS), 1)
