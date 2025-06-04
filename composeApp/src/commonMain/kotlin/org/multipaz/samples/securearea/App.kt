@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import mpzsecureareasample.composeapp.generated.resources.Res
+import mpzsecureareasample.composeapp.generated.resources.driving_license_card_art
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.multipaz.cbor.toDataItem
 import org.multipaz.compose.prompt.PromptDialogs
@@ -154,7 +156,10 @@ fun App(promptModel: PromptModel) {
                                 secureArea = getPlatformSecureArea(),
                                 iacaKey = iacaKey,
                                 iacaCert = iacaCert,
-                                documentType = getSimpleDocument()
+                                documentType = getSimpleDocument(),
+                                givenNameOverride = "Erika",
+                                displayName = "Erika's Driving License",
+                                cardArtResource = Res.drawable.driving_license_card_art,
                             )
                             showToast("Provision test documents successful")
                         } catch (e: Exception) {

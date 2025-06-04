@@ -4,8 +4,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.io.bytestring.ByteString
-import mpzsecureareasample.composeapp.generated.resources.Res
-import mpzsecureareasample.composeapp.generated.resources.driving_license_card_art
+import org.jetbrains.compose.resources.DrawableResource
 import org.multipaz.asn1.ASN1Integer
 import org.multipaz.cbor.Cbor
 import org.multipaz.credential.CredentialLoader
@@ -20,7 +19,6 @@ import org.multipaz.documenttype.DocumentType
 import org.multipaz.mdoc.util.MdocUtil
 import org.multipaz.samples.securearea.MultipazUtils.generateDsKeyAndCert
 import org.multipaz.samples.securearea.MultipazUtils.provisionDocument
-import org.multipaz.samples.securearea.knowntypes.DrivingLicense
 import org.multipaz.securearea.SecureArea
 import org.multipaz.securearea.SecureAreaRepository
 import org.multipaz.securearea.cloud.CloudCreateKeySettings
@@ -112,6 +110,9 @@ object MultipazWrapper {
         documentStore: DocumentStore,
         secureArea: SecureArea,
         documentType: DocumentType,
+        givenNameOverride: String,
+        displayName: String,
+        cardArtResource: DrawableResource,
         iacaKey: EcPrivateKey,
         iacaCert: X509Cert,
     ) {
@@ -138,9 +139,9 @@ object MultipazWrapper {
             deviceKeyAlgorithm = Algorithm.ESP256,
             deviceKeyMacAlgorithm = Algorithm.ESP256,
             numCredentialsPerDomain = 2,
-            givenNameOverride = "Erika",
-            displayName = "Erika's Driving License",
-            cardArtResource = Res.drawable.driving_license_card_art
+            givenNameOverride = givenNameOverride,
+            displayName = displayName,
+            cardArtResource = cardArtResource
         )
     }
 
