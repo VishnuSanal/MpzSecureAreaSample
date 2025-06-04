@@ -21,14 +21,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.multipaz.cbor.toDataItem
 import org.multipaz.compose.prompt.PromptDialogs
 import org.multipaz.crypto.EcPrivateKey
 import org.multipaz.crypto.X509Cert
 import org.multipaz.document.DocumentStore
+import org.multipaz.documenttype.DocumentAttributeType
+import org.multipaz.documenttype.DocumentType
+import org.multipaz.documenttype.Icon
 import org.multipaz.prompt.PromptModel
 import org.multipaz.samples.securearea.MultipazWrapper.getDocumentStore
 import org.multipaz.samples.securearea.MultipazWrapper.keyStorageInit
 import org.multipaz.samples.securearea.MultipazWrapper.provisionDrivingLicense
+import org.multipaz.samples.securearea.knowntypes.DrivingLicense.MDL_DOCTYPE
+import org.multipaz.samples.securearea.knowntypes.DrivingLicense.MDL_NAMESPACE
+import org.multipaz.samples.securearea.knowntypes.SampleData
 
 private lateinit var snackbarHostState: SnackbarHostState
 
@@ -147,6 +154,7 @@ fun App(promptModel: PromptModel) {
                                 secureArea = getPlatformSecureArea(),
                                 iacaKey = iacaKey,
                                 iacaCert = iacaCert,
+                                documentType = getSimpleDocument()
                             )
                             showToast("Provision test documents successful")
                         } catch (e: Exception) {
@@ -160,4 +168,22 @@ fun App(promptModel: PromptModel) {
             }
         }
     }
+}
+
+
+private fun getSimpleDocument(): DocumentType {
+    // return DrivingLicense.getDocumentType() // check this for an extensive example
+    return DocumentType.Builder("Driving License")
+        .addMdocDocumentType(MDL_DOCTYPE)
+        .addMdocAttribute(
+            DocumentAttributeType.String,
+            "given_name",
+            "Given Names",
+            "First name(s), other name(s), or secondary identifier, of the mDL holder",
+            true,
+            MDL_NAMESPACE,
+            Icon.PERSON,
+            SampleData.GIVEN_NAME.toDataItem()
+        )
+        .build()
 }

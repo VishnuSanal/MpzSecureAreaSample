@@ -16,6 +16,7 @@ import org.multipaz.crypto.EcPublicKey
 import org.multipaz.crypto.X500Name
 import org.multipaz.crypto.X509Cert
 import org.multipaz.document.DocumentStore
+import org.multipaz.documenttype.DocumentType
 import org.multipaz.mdoc.util.MdocUtil
 import org.multipaz.samples.securearea.MultipazUtils.generateDsKeyAndCert
 import org.multipaz.samples.securearea.MultipazUtils.provisionDocument
@@ -110,6 +111,7 @@ object MultipazWrapper {
     suspend fun provisionDrivingLicense(
         documentStore: DocumentStore,
         secureArea: SecureArea,
+        documentType: DocumentType,
         iacaKey: EcPrivateKey,
         iacaCert: X509Cert,
     ) {
@@ -132,10 +134,10 @@ object MultipazWrapper {
             },
             dsKey = dsKey,
             dsCert = dsCert,
+            documentType = documentType,
             deviceKeyAlgorithm = Algorithm.ESP256,
             deviceKeyMacAlgorithm = Algorithm.ESP256,
             numCredentialsPerDomain = 2,
-            documentType = DrivingLicense.getDocumentType(),
             givenNameOverride = "Erika",
             displayName = "Erika's Driving License",
             cardArtResource = Res.drawable.driving_license_card_art
