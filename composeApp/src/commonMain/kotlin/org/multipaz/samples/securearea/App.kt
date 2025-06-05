@@ -32,12 +32,12 @@ import org.multipaz.documenttype.DocumentAttributeType
 import org.multipaz.documenttype.DocumentType
 import org.multipaz.documenttype.Icon
 import org.multipaz.prompt.PromptModel
-import org.multipaz.samples.securearea.MultipazWrapper.getDocumentStore
-import org.multipaz.samples.securearea.MultipazWrapper.keyStorageInit
-import org.multipaz.samples.securearea.MultipazWrapper.provisionDrivingLicense
+import org.multipaz.samples.securearea.utils.IACAManager.keyStorageInit
 import org.multipaz.samples.securearea.knowntypes.DrivingLicense.MDL_DOCTYPE
 import org.multipaz.samples.securearea.knowntypes.DrivingLicense.MDL_NAMESPACE
 import org.multipaz.samples.securearea.knowntypes.SampleData
+import org.multipaz.samples.securearea.utils.DocumentManager.getDocumentStore
+import org.multipaz.samples.securearea.utils.DocumentManager.provisionDrivingLicense
 
 private lateinit var snackbarHostState: SnackbarHostState
 
