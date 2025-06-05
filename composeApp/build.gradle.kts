@@ -27,13 +27,19 @@ kotlin {
             isStatic = true
         }
     }
-    
+
     sourceSets {
-        
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+        }
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.fragment)
+
+            implementation(libs.ktor.client.android)
+            implementation(libs.bouncy.castle.bcprov)
+            implementation(libs.bouncy.castle.bcpkix)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -46,9 +52,13 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.kotlinx.io.bytestring)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.kotlinx.serialization.json)
+
             implementation(libs.multipaz)
             implementation(libs.multipaz.models)
             implementation(libs.multipaz.compose)
+
+            implementation(libs.ktor.client.core)
         }
     }
 }
