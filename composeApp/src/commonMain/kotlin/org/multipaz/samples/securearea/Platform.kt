@@ -17,8 +17,6 @@ expect fun getPlatform(): Platform
 
 expect suspend fun getPlatformSecureArea(): SecureArea
 
-expect val platformIsEmulator: Boolean
-
 expect fun platformStorage(): Storage
 
 /**

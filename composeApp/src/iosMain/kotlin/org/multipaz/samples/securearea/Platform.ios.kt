@@ -52,13 +52,9 @@ private val iosStorage = SqliteStorage(
     coroutineContext = newSingleThreadContext("DB")
 )
 
-// SecureEnclaveSecureArea doesn't work on the iOS simulator so use SoftwareSecureArea there
+// fixme: SecureEnclaveSecureArea doesn't work on the iOS simulator
 private val secureEnclaveSecureAreaProvider = SecureAreaProvider {
-    if (platformIsEmulator) {
-        SoftwareSecureArea.create(iosStorage)
-    } else {
-        SecureEnclaveSecureArea.create(iosStorage)
-    }
+    SecureEnclaveSecureArea.create(iosStorage)
 }
 
 actual fun platformStorage(): Storage {
