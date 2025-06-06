@@ -12,6 +12,7 @@ import androidx.compose.material.SnackbarHostState
 import androidx.compose.material.SnackbarResult
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import mpzsecureareasample.composeapp.generated.resources.Res
 import mpzsecureareasample.composeapp.generated.resources.driving_license_card_art
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.multipaz.cbor.toDataItem
+import org.multipaz.compose.decodeImage
 import org.multipaz.compose.prompt.PromptDialogs
 import org.multipaz.crypto.EcPrivateKey
 import org.multipaz.crypto.X509Cert
@@ -32,12 +34,15 @@ import org.multipaz.documenttype.DocumentAttributeType
 import org.multipaz.documenttype.DocumentType
 import org.multipaz.documenttype.Icon
 import org.multipaz.prompt.PromptModel
-import org.multipaz.samples.securearea.utils.IACAManager.keyStorageInit
+import org.multipaz.samples.securearea.knowntypes.DrivingLicense
 import org.multipaz.samples.securearea.knowntypes.DrivingLicense.MDL_DOCTYPE
 import org.multipaz.samples.securearea.knowntypes.DrivingLicense.MDL_NAMESPACE
 import org.multipaz.samples.securearea.knowntypes.SampleData
+import org.multipaz.samples.securearea.utils.DocumentInfo
 import org.multipaz.samples.securearea.utils.DocumentManager.getDocumentStore
 import org.multipaz.samples.securearea.utils.DocumentManager.provisionDrivingLicense
+import org.multipaz.samples.securearea.utils.IACAManager.keyStorageInit
+import org.multipaz.samples.securearea.utils.buildCredentialInfos
 
 private lateinit var snackbarHostState: SnackbarHostState
 
@@ -76,40 +81,7 @@ fun App(promptModel: PromptModel) {
 
             val coroutineScope = rememberCoroutineScope { promptModel }
 
-            /*coroutineScope.launch(Dispatchers.Main) {
-                try {
-                    documentStore = getDocumentStore()
-                    showToast("Document store created")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    showToast("Document store creation failed")
-                }
 
-                try {
-                    val keyPair = keyStorageInit()
-
-                    iacaKey = keyPair.first
-                    iacaCert = keyPair.second
-
-                    showToast("keyStorageInit done")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    showToast("keyStorageInit() failed")
-                }
-
-                try {
-                    provisionDrivingLicense(
-                        documentStore = documentStore,
-                        secureArea = getPlatformSecureArea(),
-                        iacaKey = iacaKey,
-                        iacaCert = iacaCert,
-                    )
-                    showToast("Provision test documents successful")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    showToast("Provision test documents creation failed")
-                }
-            }*/
 
             Column(
                 modifier = Modifier.fillMaxWidth().padding(50.dp),
@@ -127,7 +99,35 @@ fun App(promptModel: PromptModel) {
                         }
                     }
                 }) {
-                    Text("Create DocumentStore")
+                    Text("Init DocumentStore")
+                }
+
+                Button(onClick = {
+                    coroutineScope.launch {
+                        try {
+                            val docIds = documentStore.listDocuments()
+
+                            showToast("\"Document Store has ${documentStore.listDocuments().size} documents: ${documentStore.listDocuments()}")
+
+                            val documentInfos = mutableStateMapOf<String, DocumentInfo>()
+                            for (documentId in docIds) {
+                                val document = documentStore.lookupDocument(documentId)
+                                if (document != null) {
+//                                    documentInfos[documentId] = DocumentInfo(
+//                                        document = document,
+//                                        cardArt = decodeImage(document.metadata.cardArt!!.toByteArray()), fixme: npe
+//                                        credentialInfos = document.buildCredentialInfos()
+//                                    )
+                                }
+                            }
+//                            showToast("\"Document Store has ${documentInfos.size} documents: ${documentInfos}")
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            showToast("Document listing failed")
+                        }
+                    }
+                }) {
+                    Text("List Documents (if already issued)")
                 }
 
                 Button(onClick = {
@@ -177,18 +177,18 @@ fun App(promptModel: PromptModel) {
 
 
 private fun getSimpleDocument(): DocumentType {
-    // return DrivingLicense.getDocumentType() // check this for an extensive example
-    return DocumentType.Builder("Driving License")
-        .addMdocDocumentType(MDL_DOCTYPE)
-        .addMdocAttribute(
-            DocumentAttributeType.String,
-            "given_name",
-            "Given Names",
-            "First name(s), other name(s), or secondary identifier, of the mDL holder",
-            true,
-            MDL_NAMESPACE,
-            Icon.PERSON,
-            SampleData.GIVEN_NAME.toDataItem()
-        )
-        .build()
+     return DrivingLicense.getDocumentType() // check this for an extensive example
+//    return DocumentType.Builder("Driving License")
+//        .addMdocDocumentType(MDL_DOCTYPE)
+//        .addMdocAttribute(
+//            DocumentAttributeType.String,
+//            "given_name",
+//            "Given Names",
+//            "First name(s), other name(s), or secondary identifier, of the mDL holder",
+//            true,
+//            MDL_NAMESPACE,
+//            Icon.PERSON,
+//            SampleData.GIVEN_NAME.toDataItem()
+//        )
+//        .build()
 }
