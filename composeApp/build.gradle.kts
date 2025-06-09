@@ -92,6 +92,10 @@ android {
 }
 
 dependencies {
+    implementation(libs.cbor)
+    // https://mvnrepository.com/artifact/org.multipaz/multipaz-cbor-rpc
+    implementation("org.multipaz:multipaz-cbor-rpc:0.91.0")
+
     debugImplementation(compose.uiTooling)
 }
 

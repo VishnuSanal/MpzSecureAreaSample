@@ -8,6 +8,7 @@ import kotlinx.io.bytestring.ByteString
 import kotlinx.io.bytestring.isEmpty
 import kotlin.concurrent.Volatile
 
+// todo: check ksp conf
 class TestAppDocumentMetadata private constructor(
     serializedData: ByteString?,
     private val saveFn: suspend (data: ByteString) -> Unit
@@ -30,8 +31,8 @@ class TestAppDocumentMetadata private constructor(
         data = if (serializedData == null || serializedData.isEmpty()) {
             TestData()
         } else {
-//            TestData.fromCbor(serializedData.toByteArray())
-            TODO()
+            TestData.fromCbor(serializedData.toByteArray())
+//            TODO()
         }
     }
 
@@ -42,7 +43,7 @@ class TestAppDocumentMetadata private constructor(
     ) {
         val data = TestData(displayName, typeDisplayName, cardArt)
         this.data = data
-//        saveFn(ByteString(data.toCbor())) TODO()
+        saveFn(ByteString(data.toCbor()))
     }
 
     override suspend fun documentDeleted() {

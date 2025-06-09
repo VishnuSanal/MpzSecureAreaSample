@@ -21,6 +21,7 @@ kotlinx-datetime = "0.6.0"
 kotlinx-serialization = "1.7.0"
 
 multipaz = "0.91.0"
+cbor = "0.9"
 
 ktor = "2.3.13"
 
@@ -52,6 +53,7 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 multipaz = { group = "org.multipaz", name = "multipaz", version.ref = "multipaz" }
 multipaz-models = { group = "org.multipaz", name = "multipaz-models", version.ref = "multipaz" }
 multipaz-compose = { group = "org.multipaz", name = "multipaz-compose", version.ref = "multipaz" }
+cbor = { module = "co.nstant.in:cbor", version.ref = "cbor" }
 
 ktor-client-android = { module = "io.ktor:ktor-client-android", version.ref = "ktor" }
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
